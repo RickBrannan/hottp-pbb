@@ -7,7 +7,13 @@ Code is a simple Python script that uses `python-docx` to create a word document
 
 * `src/hottp2pbb.py` — Python script to convert UBS HOTTP XML to Logos Personal Book Builder format
 
-# Data
+# Source Data
+
+This code relies on data in the [UBSICAP UBS Open License repository](https://github.com/ubsicap/ubs-open-license). It assumes you've cloned or forked that repo locally.
+
+If you're only looking for the Logos PBB source and don't want to clone repos and stuff, totally cool. Read the next section: :down-arrow:
+
+# Created Data (Logos PBB Input)
 
 Data created by the script is available in the `data/pbb` folder.
 
