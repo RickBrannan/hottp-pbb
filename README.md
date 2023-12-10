@@ -11,7 +11,7 @@ Code is a simple Python script that uses `python-docx` to create a word document
 
 This code relies on data in the [UBSICAP UBS Open License repository](https://github.com/ubsicap/ubs-open-license). It assumes you've cloned or forked that repo locally.
 
-If you're only looking for the Logos PBB source and don't want to clone repos and stuff, totally cool. Read the next section: :down-arrow:
+If you're only looking for the Logos PBB source and don't want to clone repos and stuff, totally cool. Read the next section for instructions.
 
 # Created Data (Logos PBB Input)
 
