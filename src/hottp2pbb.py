@@ -12,6 +12,7 @@ from hebrew import Hebrew
 from docx import Document
 from unicodedata import normalize
 from biblelib.word import BCVWPID, BCVID, fromusfm
+from biblelib.book import book
 from lxml import etree
 # from shared.shared_classes import *
 from src import DATAPATH, ROOT
@@ -38,119 +39,40 @@ class Verse:
 
 hottp_dir = ROOT.parent.parent / "ubsicap/ubs-open-license/HOTTP/"
 data_dir = DATAPATH / "pbb/"
-macula_hebrew_nodes_dir = ROOT.parent.parent / "Clear/macula-hebrew/Nodes/"
-macula_hebrew_mappings = ROOT.parent.parent / "Clear/macula-hebrew/mappings/morpheme-mappings.xml"
+book_names = book.Books()
+current_book = "Genesis"
 
 lang = "en"
 # lang = "fr"
 
-# load hebrew word information from Clear-Bible's macula-hebrew data
-def load_wlc_lines():
-    print(f"Loading WLC from Nodes")
-    return_lines = {}
-    previous_verse_id = "01001001"
-    current_verse_id = ""
-    words = {}
 
-    for filename in os.listdir(macula_hebrew_nodes_dir):
-        if filename == "macula-hebrew.xml":
-            continue
-        if filename.endswith(".xml"):
-            macula_xml = etree.parse(macula_hebrew_nodes_dir / filename)
-            macula_root = macula_xml.getroot()
-            for item in macula_root.xpath(".//*[@xml:id]"):
-                identifier = item.attrib['{http://www.w3.org/XML/1998/namespace}id']
-                # identifier = re.sub(r"^o", "", identifier)
-                if re.search(r"[^o0-9]", identifier):
-                    # blasted hebrew-prepended id whatever thingies
-                    continue
-                bcv = BCVWPID(identifier)
-                # create the verse object if it doesn't exist
-                current_verse_id = bcv.book_ID + bcv.chapter_ID + bcv.verse_ID
-                if previous_verse_id != current_verse_id:
-                    # we need to dump verse info.
-                    previous_bcv = BCVID(previous_verse_id)
-                    return_lines[previous_verse_id] = Verse(previous_verse_id, previous_bcv.book_ID, previous_bcv.chapter_ID,
-                                                            previous_bcv.verse_ID, previous_bcv.to_usfm(), words)
-                    previous_verse_id = current_verse_id
-                    words = {}
-                    alt_id_counter = {}
-                # create the word object
-                after = ""
-                if item.attrib.__contains__("after"):
-                    after = item.attrib["after"]
-                english = ""
-                if item.attrib.__contains__("english"):
-                    english = item.attrib["english"]
-                pos = ""
-                if item.attrib.__contains__("pos"):
-                    pos = item.attrib["pos"]
-                word = Word(identifier, item.text, after, english, pos)
-                heb = Hebrew(item.text)
-                word.text = heb.no_taamim().string
-                words[word.identifier] = word
-
-    bcv = BCVID(current_verse_id)
-    return_lines[current_verse_id] = Verse(current_verse_id, bcv.book_ID, bcv.chapter_ID, bcv.verse_ID, bcv.to_usfm(), words)
-
-    # send it back
-    return return_lines
-
-
-# the morpheme-mappings.xml allows mapping from the MARBLE word identifiers
-# used in UBSICAP to the macula word identifiers used in Clear-Bible's macula-hebrew
-# this will allow us to get the word-level data for the references specified in HOTTP
-def load_morpheme_mappings():
-    print(f"Loading morpheme mappings from {macula_hebrew_mappings}")
-    morpheme_mappings = {}
-    morpheme_xml = etree.parse(macula_hebrew_mappings)
-    morpheme_root = morpheme_xml.getroot()
-    for item in morpheme_root.xpath(".//m"):
-        morpheme_mappings[item.attrib["marble"]] = "o" + item.attrib["n"]
-    return morpheme_mappings
-
-
-def get_hebrew_heading(entry):
-    hebrew_text = []
+def get_current_book(entry):
     for reference in entry.xpath(".//Reference"):
         marble_id = reference.text
-        if marble_id in morpheme_mappings:
-            macula_id = morpheme_mappings[marble_id]
-            # bcv = BCVWPID(re.sub(r"^o", "", macula_id))
-            bcv = BCVWPID(macula_id)
-            if macula_id in wlc_lines[bcv.to_bcvid].words:
-                word = wlc_lines[bcv.to_bcvid].words[macula_id]
-                hebrew_text.append(word)
-            else:
-                print(f"WARNING: {macula_id} not found in WLC")
-
-    # build the Hebrew string
-    return_hebrew = ""
-    for word in hebrew_text:
-        return_hebrew += word.text + word.after
-
-    return return_hebrew
+        bcv = BCVID(re.sub(r"^0(\d{8})\d{5}$",r"\1", marble_id))
+        current_book = book_names.fromusfmnumber(bcv.book_ID).name
+        return current_book
+    return ""
 
 
 def get_current_reference(entry):
     refs = []
     for reference in entry.xpath(".//Reference"):
         marble_id = reference.text
-        if marble_id in morpheme_mappings:
-            macula_id = morpheme_mappings[marble_id]
-            bcv = BCVWPID(re.sub(r"^o", "", macula_id))
-            if not bcv.to_bcvid in refs:
-                refs.append(bcv.to_bcvid)
+        bcv = BCVID(re.sub(r"^0(\d{8})\d{5}$",r"\1", marble_id))
+        if not bcv.ID in refs:
+            refs.append(bcv.ID)
 
     if len(refs) == 1:
         return BCVID(refs[0]).to_usfm()
+    elif len(refs) == 0:
+        # we have problems. re-get the first reference and roll with it.
+        marble_id = entry.xpath(".//Reference")[0].text
+        bcv = BCVID(re.sub(r"^0(\d{8})\d{5}$", r"\1", marble_id))
+        return bcv.to_usfm()
     else:
         return f"{BCVID(refs[0]).to_usfm()}–{int(BCVID(refs[-1]).verse_ID)}"
 
-
-# preliminaries. load macula data
-wlc_lines = load_wlc_lines()
-morpheme_mappings = load_morpheme_mappings()
 
 # get a word doc started since that's what PBB uses
 pbb_doc = Document()
@@ -160,9 +82,82 @@ pbb_doc = Document()
 # open HOTTP.XML and start parsin'.
 hottp_xml = etree.parse(hottp_dir / "hottp.xml")
 hottp_root = hottp_xml.getroot()
+previous_book = "Genesis"
+previous_reference = ""
+pbb_doc.add_heading("Genesis", level=1)
 for entry in hottp_root.xpath(".//HOTTP_Entry"):
     id = entry.attrib["Id"]
-    hebrew_heading = get_hebrew_heading(entry)
     current_reference = get_current_reference(entry)
-    print(f"{id}: {hebrew_heading} {current_reference}")
+    current_book = get_current_book(entry)
+    if current_book != previous_book:
+        previous_book = current_book
+        pbb_doc.add_heading(current_book, level=1)
+
+    print(f"{id}: {current_reference}")
+    if current_reference != previous_reference:
+        pbb_doc.add_heading(f"[[@BibleBHS:{current_reference}]][[BibleBHS:{current_reference}]]", level=2)
+        previous_reference = current_reference
+    else:
+        pbb_doc.add_heading(f"[[BibleBHS:{current_reference}]]", level=2)
+
+    remark = ""
+    if lang == "en":
+        remark = entry.xpath(".//Remark")[0].text
+    elif lang == "fr":
+        remark = entry.xpath(".//Remark_FR")[0].text
+    suggestion = ""
+    if lang == "en":
+        suggestion = entry.xpath(".//Suggestion")[0].text
+    elif lang == "fr":
+        suggestion = entry.xpath(".//SuggestionFR")[0].text
+
+    if remark != "":
+        remark_paragraph = pbb_doc.add_paragraph()
+        # need to localize for FR
+        remark_paragraph.add_run("Remark:").bold = True
+        remark_paragraph.add_run(" ")
+        # because it looks like there are at least &lt;span...&gt; in some elements
+        # this is usually Hebrew; need to actually treat it properly at some point.
+        remark = re.sub(r"<[^>]+>","", str(remark))
+        remark_paragraph.add_run(remark)
+    if suggestion != "":
+        suggestion_paragraph = pbb_doc.add_paragraph()
+        # need to localize for FR
+        suggestion_paragraph.add_run("Suggestion:").bold = True
+        suggestion_paragraph.add_run(" ")
+        suggestion_paragraph.add_run(suggestion)
+
+    # cycle the alternatives
+    alt_count = 0
+    for alternative in entry.xpath(".//Alternatives/Alternative"):
+        # Source, Rating, Versions/Version/Text, Versions/Version/Content, Factors, Literal, LiteralFR
+        alt_count += 1
+        pbb_doc.add_heading(f"Alternative {alt_count}", level=3)
+        # need to get a hebrew text style around "Source"
+        source = alternative.xpath(".//Source")[0].text
+        pbb_doc.add_paragraph(f"{source}")
+        rating = alternative.xpath(".//Rating")[0].text
+        # need to figure out how to reference Rating and Factors in HTML
+        pbb_doc.add_paragraph(f"Rating: {rating}")
+
+        # need to map versions to languages and get proper langauges in here
+        for version in alternative.xpath(".//Versions/Version"):
+            version_text = version.xpath(".//Text")[0].text
+            version_content = version.xpath(".//Content")[0].text
+            version_paragraph = pbb_doc.add_paragraph(f"{version_text}:", style="List Bullet")
+            version_paragraph.add_run(f" {version_content}").italic = True
+
+        factors = []
+        for factor in alternative.xpath(".//Factors/Factor"):
+            factors.append(factor.text)
+        if len(factors) > 0:
+            pbb_doc.add_paragraph(f"Factors: {', '.join(factors)}")
+
+        if lang == "en":
+            literal = alternative.xpath(".//Literal")[0].text
+        elif lang == "fr":
+            literal = alternative.xpath(".//LiteralFR")[0].text
+
+pbb_doc.save(data_dir / f"hottp_{lang}.docx")
+
 
