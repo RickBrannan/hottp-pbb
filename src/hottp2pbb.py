@@ -1,40 +1,17 @@
 """
     convert hottp.xml into two different PBB files,
-    one for English and one for French
+    only English for now
     RWB 2023-12-08
 """
 import os
-import dataclasses
-import json
 import regex as re
-import pandas as pd
 from hebrew import Hebrew
 from docx import Document
 from unicodedata import normalize
 from biblelib.word import BCVWPID, BCVID, fromusfm
 from biblelib.book import book
 from lxml import etree
-# from shared.shared_classes import *
 from src import DATAPATH, ROOT
-
-
-@dataclasses.dataclass
-class Word:
-    identifier: str
-    text: str
-    after: str
-    gloss: str
-    pos: str
-
-@dataclasses.dataclass
-class Verse:
-    identifier: str
-    book: str
-    chapter: str
-    verse: str
-    usfm: str
-    # the str is the Word.identifier so we can sort to ensure word order
-    words: dict[str, Word] = dataclasses.field(default_factory=list)
 
 
 hottp_dir = ROOT.parent.parent / "ubsicap/ubs-open-license/HOTTP/"
@@ -155,8 +132,14 @@ for entry in hottp_root.xpath(".//HOTTP_Entry"):
 
         if lang == "en":
             literal = alternative.xpath(".//Literal")[0].text
+            literal_paragraph = pbb_doc.add_paragraph()
+            literal_paragraph.add_run(f"Literal: ").bold = True
+            literal_paragraph.add_run(f"{literal}")
         elif lang == "fr":
             literal = alternative.xpath(".//LiteralFR")[0].text
+            literal_paragraph = pbb_doc.add_paragraph()
+            literal_paragraph.add_run(f"Literal: ").bold = True
+            literal_paragraph.add_run(f"{literal}")
 
 pbb_doc.save(data_dir / f"hottp_{lang}.docx")
 
