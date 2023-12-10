@@ -1,5 +1,5 @@
 # hottp-pbb
-Code and data to produce a text file of UBS's HOTTP (Hebrew OT Text Project) volumes compatible for Logos Personal Book Builder.
+Code and data to produce a `*.docx` file of UBS's HOTTP (Hebrew OT Text Project) volumes compatible for Logos Personal Book Builder.
 
 # Code
 
@@ -22,3 +22,11 @@ There are four word docs in the folder as well as one graphic.
 # License
 
 This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License.
+
+# Using with Logos
+
+The `*.docx` and `*.jpg` files are suitable for use to create a Personal Book Builder (PBB) resource for Logos Bible Software.
+
+Creation of the resource is left as an excercise to the reader/user. Search the help docs for "PBB" or "Personal Book" and follow the instructions.
+
+If you get stumped, ask for some help on the Logos Users Forums: https://community.logos.com .
