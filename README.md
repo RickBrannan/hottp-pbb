@@ -13,7 +13,7 @@ Data created by the script is available in the `data/pbb` folder.
 
 There are four word docs in the folder as well as one graphic. 
 
-* `data/pbb/hottp_en.docx` — The Preliminary and Interim Report of the Hebrew Old Testament Text Project converted from XML openly licensed by UBS.
+* `data/pbb/hottp_en.docx` — The Preliminary and Interim Report of the Hebrew Old Testament Text Project converted from [XML openly licensed by UBS](https://github.com/ubsicap/ubs-open-license/tree/main/HOTTP).
 * `data/pbb/pbb_title.docx` — A title page for the PBB edition, with information from the README found in the [UBSICAP respository](https://github.com/ubsicap/ubs-open-license/tree/main/HOTTP).
 * `data/pbb/ratings_en.docx` — A MSWord document created from the HTML edition of the Ratings document found in the [UBSICAP respository](https://github.com/ubsicap/ubs-open-license/tree/main/HOTTP).
 * `data/pbb/factors_en.docx` — A MSWord document created from the HTML edition of the Factors document found in the [UBSICAP respository](https://github.com/ubsicap/ubs-open-license/tree/main/HOTTP).
